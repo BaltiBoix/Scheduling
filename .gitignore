@@ -3,3 +3,5 @@
 *.pth
 *.amltmp
 *.zip
+**/.amlignore
+**/.ipynb_aml_checkpoints/
