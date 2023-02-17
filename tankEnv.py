@@ -671,6 +671,6 @@ class crudeTanksEnv(gym.Env):
 gym.envs.registration.register(
     'crudeTanksEnv-v0',
     crudeTanksEnv,
-    reward_threshold=850,
+    reward_threshold=1000,
     max_episode_steps=720
 )
