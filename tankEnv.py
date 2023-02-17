@@ -398,14 +398,52 @@ def checkAction(S):
     if S.cargo.volUtil < 1.E-3:
         for i in [1, 2, 3, 7, 8, 9, 10, 11, 12]:
             actionAvail[0][i] = False
+    if S.tank('101').volUtil < S.pump('p12').flow():
+        for i in [4, 9, 11]:
+            actionAvail[0][i] = False
+    if S.tank('101').volEmpty < S.pump('p01').flow():
+        for i in [1, 7, 8]:
+            actionAvail[0][i] = False
+    if S.tank('102').volUtil < S.pump('p12').flow():
+        for i in [5, 7, 12]:
+            actionAvail[0][i] = False
+    if S.tank('102').volEmpty < S.pump('p01').flow():
+        for i in [2, 9, 10]:
+            actionAvail[0][i] = False
+    if S.tank('103').volUtil < S.pump('p12').flow():
+        for i in [6, 8, 10]:
+            actionAvail[0][i] = False
+    if S.tank('103').volEmpty < S.pump('p01').flow():
+        for i in [3, 11, 12]:
+            actionAvail[0][i] = False
+
     if S.tank('201').volUtil < S.pump('p23').flow():
         for i in [2, 4]:
+            actionAvail[1][i] = False
+    if S.tank('201').volEmpty < S.pump('p12').flow():
+        for i in [0, 1]:
             actionAvail[1][i] = False
     if S.tank('202').volUtil < S.pump('p23').flow():
         for i in [0, 5]:
             actionAvail[1][i] = False
+    if S.tank('202').volEmpty < S.pump('p12').flow():
+        for i in [2, 3]:
+            actionAvail[1][i] = False
     if S.tank('203').volUtil < S.pump('p23').flow():
         for i in [1, 3]:
+            actionAvail[1][i] = False
+    if S.tank('202').volEmpty < S.pump('p12').flow():
+        for i in [4, 5]:
+            actionAvail[1][i] = False
+
+    if S.lastAction[1] in [2, 4]:
+        for i in [0, 1]:
+            actionAvail[1][i] = False
+    if S.lastAction[1] in [0, 5]:
+        for i in [2, 3]:
+            actionAvail[1][i] = False
+    if S.lastAction[1] in [1, 3]:
+        for i in [4, 5]:
             actionAvail[1][i] = False
     return actionAvail
         
@@ -501,9 +539,9 @@ def siteStep(action, S):
     
     if S.t > 1:
         if action['farmTanks'][1] != S.lastAction[1]:
-            S.reward -= 0.5
+            S.reward -= 0.1
         if action['farmTanks'][0] != S.lastAction[0]:
-            S.reward -= 0.5
+            S.reward -= 0.05
     if S.t >= TSCOPE:
         S.reward += TSCOPE
     
