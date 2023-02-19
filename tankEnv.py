@@ -346,7 +346,6 @@ class site():
         v = min(v, self.tank(tk).volUtil)
         v = self.unit.distil(crudeParcel(v, self.tank(tk).comp))
         _ = self.tank(tk).getParcel(v)
-        self.reward += v
         self.movesLog[self.t][tk] = -1
         self.prodsLog[self.t] = self.unit.prod
         return
@@ -537,13 +536,18 @@ def siteStep(action, S):
             S.move(tk1, '203', 'lcru12', 'p12')
         S.feedUnit('202', 'p23', action['unitFeed'])
     
+    vF = np.sum(S.unit.prod) < 1.E-3
+    if vF:
+        S.reward -= 1
+    else:
+        S.reward += vF
     if S.t > 1:
         if action['farmTanks'][1] != S.lastAction[1]:
             S.reward -= 0.1
         if action['farmTanks'][0] != S.lastAction[0]:
             S.reward -= 0.05
-    if S.t >= TSCOPE:
-        S.reward += TSCOPE
+    #if S.t >= TSCOPE:
+    #    S.reward += TSCOPE
     
     S.lastAction = action['farmTanks']
     
@@ -552,7 +556,8 @@ def siteStep(action, S):
 
     actionAvail = checkAction(S)
     
-    return obs, S.reward, S.t >= TSCOPE or np.sum(S.unit.prod) < 1.E-3 or (~actionAvail[1]).all(), False, {'actionAvail': actionAvail}
+    #return obs, S.reward, S.t >= TSCOPE or np.sum(S.unit.prod) < 1.E-3 or (~actionAvail[1]).all(), False, {'actionAvail': actionAvail}
+    return obs, S.reward, S.t >= TSCOPE, np.sum(S.unit.prod) < 1.E-3 or (~actionAvail[1]).all(), {'actionAvail': actionAvail}
 
 def siteRender(S):
     m = np.zeros((NT, TSCOPE+1), dtype=int)
@@ -671,6 +676,6 @@ class crudeTanksEnv(gym.Env):
 gym.envs.registration.register(
     'crudeTanksEnv-v0',
     crudeTanksEnv,
-    reward_threshold=1000,
+    reward_threshold=500,
     max_episode_steps=720
 )
