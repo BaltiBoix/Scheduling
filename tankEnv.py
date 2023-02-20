@@ -419,21 +419,21 @@ def checkAction(S):
     if S.tank('201').volUtil < S.pump('p23').flow():
         for i in [2, 4]:
             actionAvail[1][i] = False
-    if S.tank('201').volEmpty < S.pump('p12').flow():
-        for i in [0, 1]:
-            actionAvail[1][i] = False
+#     if S.tank('201').volEmpty < S.pump('p12').flow():
+#         for i in [0, 1]:
+#             actionAvail[1][i] = False
     if S.tank('202').volUtil < S.pump('p23').flow():
         for i in [0, 5]:
             actionAvail[1][i] = False
-    if S.tank('202').volEmpty < S.pump('p12').flow():
-        for i in [2, 3]:
-            actionAvail[1][i] = False
+#     if S.tank('202').volEmpty < S.pump('p12').flow():
+#         for i in [2, 3]:
+#             actionAvail[1][i] = False
     if S.tank('203').volUtil < S.pump('p23').flow():
         for i in [1, 3]:
             actionAvail[1][i] = False
-    if S.tank('202').volEmpty < S.pump('p12').flow():
-        for i in [4, 5]:
-            actionAvail[1][i] = False
+#     if S.tank('202').volEmpty < S.pump('p12').flow():
+#         for i in [4, 5]:
+#             actionAvail[1][i] = False
 
     if S.lastAction[1] in [2, 4]:
         for i in [0, 1]:
