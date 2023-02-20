@@ -538,7 +538,7 @@ def siteStep(action, S):
     
     vF = np.sum(S.unit.prod) < 1.E-3
     if vF:
-        S.reward -= 1
+        S.reward -= 0.1
     else:
         S.reward += vF
     if S.t > 1:
