@@ -394,20 +394,63 @@ class site():
         txt += self.lines.__str__()
         return txt        
 
-def checkAction(S):
-    actionAvail = np.array(97*[True])
+def checkAction(S, actionList):
+    actionAvail = np.array(len(actionList)*[True])
     if S.cargo.volUtil < 1.E-3:
-        for i in range(31, 97):
-            actionAvail[i] = False
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j1 != 0:
+                actionAvail[i] = False
     if S.tank('101').volEmpty < S.pump('p01').flow():
-        for i in range(31, 53):
-            actionAvail[i] = False
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j1 == 1:
+                actionAvail[i] = False
     if S.tank('102').volEmpty < S.pump('p01').flow():
-        for i in range(53, 75):
-            actionAvail[i] = False
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j1 == 2:
+                actionAvail[i] = False
     if S.tank('103').volEmpty < S.pump('p01').flow():
-        for i in range(75, 97):
-            actionAvail[i] = False
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j1 == 3:
+                actionAvail[i] = False
+
+    if S.tank('101').volUtil < S.pump('p12').flow():
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j2 in [1, 2, 3]:
+                actionAvail[i] = False
+    if S.tank('102').volUtil < S.pump('p12').flow():
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j2 in [4, 5, 6]:
+                actionAvail[i] = False
+    if S.tank('103').volUtil < S.pump('p12').flow():
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j2 in [7, 8, 9]:
+                actionAvail[i] = False
+
+    if S.tank('201').volEmpty < S.pump('p12').flow():
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j2 in [1, 4, 7]:
+                actionAvail[i] = False
+    if S.tank('202').volEmpty < S.pump('p12').flow():
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j2 in [2, 5, 8]:
+                actionAvail[i] = False
+    if S.tank('203').volEmpty < S.pump('p12').flow():
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j2 in [3, 6, 9]:
+                actionAvail[i] = False
+
+    if S.tank('201').volUtil < S.pump('p23').flow():
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j3 == 1:
+                actionAvail[i] = False
+    if S.tank('202').volUtil < S.pump('p23').flow():
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j3 == 2:
+                actionAvail[i] = False
+    if S.tank('203').volUtil < S.pump('p23').flow():
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j3 == 3:
+                actionAvail[i] = False
 
     return actionAvail
         
@@ -436,9 +479,11 @@ def siteReset(kwargs):
     S.tkVolsLog[S.t] = obs['tkVols']
     return S, obs
 
-def siteStep(action, S):
+def siteStep(actN, actionList, S):
 
     S.newStep()
+    
+    action = actionList[actN]
 
     if action[0] == 0:
         pass
@@ -493,7 +538,7 @@ def siteStep(action, S):
     obs = S.toObs()
     S.tkVolsLog[S.t] = obs['tkVols']
 
-    actionAvail = checkAction(S)
+    actionAvail = checkAction(S, actionList)
     
     #return obs, S.reward, S.t >= TSCOPE or np.sum(S.unit.prod) < 1.E-3 or (~actionAvail[1]).all(), False, {'actionAvail': actionAvail}
     return obs, S.reward, S.t >= TSCOPE, np.sum(S.unit.prod) < 1.E-3 or (~actionAvail[1]).all(), {'actionAvail': actionAvail}
@@ -692,7 +737,7 @@ class crudeTanksEnv(gym.Env):
   
     def step(self, action):
     # Execute one time step within the environment
-        return siteStep(self.actionList[action], self.S)
+        return siteStep(action, self.actionList, self.S)
 
     def reset(self, seed=None, **kwargs):
     # Reset the state of the environment to an initial state
@@ -701,7 +746,7 @@ class crudeTanksEnv(gym.Env):
         return obs, {'sched': deepcopy(self.S.cargo.sched), 
                      'assay': deepcopy(self.S.unit.assay), 
                      'unitVolCutMax': deepcopy(self.S.unit.volCutMax),
-                     'actionAvail': checkAction(self.S)}
+                     'actionAvail': checkAction(self.S, self.actionList)}
   
     def render(self, mode='human', close=False):
     # Render the environment to the screen
