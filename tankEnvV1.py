@@ -342,6 +342,8 @@ class site():
     def feedUnit(self, tk, p, per=None):
         if per is not None:
             v = per*self.pump(p).flow()
+        else:
+            v = None
         v = self.pump(p).flow(v)
         v = min(v, self.tank(tk).volUtil)
         v = self.unit.distil(crudeParcel(v, self.tank(tk).comp))
@@ -393,57 +395,20 @@ class site():
         return txt        
 
 def checkAction(S):
-    actionAvail = {0: np.array(13*[True]), 1: np.array(6*[True])}
+    actionAvail = np.array(97*[True])
     if S.cargo.volUtil < 1.E-3:
-        for i in [1, 2, 3, 7, 8, 9, 10, 11, 12]:
-            actionAvail[0][i] = False
-    if S.tank('101').volUtil < S.pump('p12').flow():
-        for i in [4, 9, 11]:
-            actionAvail[0][i] = False
+        for i in range(31, 97):
+            actionAvail[i] = False
     if S.tank('101').volEmpty < S.pump('p01').flow():
-        for i in [1, 7, 8]:
-            actionAvail[0][i] = False
-    if S.tank('102').volUtil < S.pump('p12').flow():
-        for i in [5, 7, 12]:
-            actionAvail[0][i] = False
+        for i in range(31, 53):
+            actionAvail[i] = False
     if S.tank('102').volEmpty < S.pump('p01').flow():
-        for i in [2, 9, 10]:
-            actionAvail[0][i] = False
-    if S.tank('103').volUtil < S.pump('p12').flow():
-        for i in [6, 8, 10]:
-            actionAvail[0][i] = False
+        for i in range(53, 75):
+            actionAvail[i] = False
     if S.tank('103').volEmpty < S.pump('p01').flow():
-        for i in [3, 11, 12]:
-            actionAvail[0][i] = False
+        for i in range(75, 97):
+            actionAvail[i] = False
 
-    if S.tank('201').volUtil < S.pump('p23').flow():
-        for i in [2, 4]:
-            actionAvail[1][i] = False
-#     if S.tank('201').volEmpty < S.pump('p12').flow():
-#         for i in [0, 1]:
-#             actionAvail[1][i] = False
-    if S.tank('202').volUtil < S.pump('p23').flow():
-        for i in [0, 5]:
-            actionAvail[1][i] = False
-#     if S.tank('202').volEmpty < S.pump('p12').flow():
-#         for i in [2, 3]:
-#             actionAvail[1][i] = False
-    if S.tank('203').volUtil < S.pump('p23').flow():
-        for i in [1, 3]:
-            actionAvail[1][i] = False
-#     if S.tank('202').volEmpty < S.pump('p12').flow():
-#         for i in [4, 5]:
-#             actionAvail[1][i] = False
-
-    if S.lastAction[1] in [2, 4]:
-        for i in [0, 1]:
-            actionAvail[1][i] = False
-    if S.lastAction[1] in [0, 5]:
-        for i in [2, 3]:
-            actionAvail[1][i] = False
-    if S.lastAction[1] in [1, 3]:
-        for i in [4, 5]:
-            actionAvail[1][i] = False
     return actionAvail
         
 def siteReset(kwargs):
@@ -475,66 +440,44 @@ def siteStep(action, S):
 
     S.newStep()
 
-    if action['farmTanks'][0] == 0:
-        tk1 = None
-    elif action['farmTanks'][0] == 1:
+    if action[0] == 0:
+        pass
+    elif action[0] == 1:
         S.move('jetty', '101', 'lcru01', 'p01')
-        tk1 = None
-    elif action['farmTanks'][0] == 2:
+    elif action[0] == 2:
         S.move('jetty', '102', 'lcru01', 'p01')
-        tk1 = None
-    elif action['farmTanks'][0] == 3:
+    elif action[0] == 3:
         S.move('jetty', '103', 'lcru01', 'p01')
-        tk1 = None
-    elif action['farmTanks'][0] == 4:
-        tk1 = '101'
-    elif action['farmTanks'][0] == 5:
-        tk1 = '102'
-    elif action['farmTanks'][0] == 6:
-        tk1 = '103'
-    elif action['farmTanks'][0] == 7:
-        S.move('jetty', '101', 'lcru01', 'p01')
-        tk1 = '102'
-    elif action['farmTanks'][0] == 8:
-        S.move('jetty', '101', 'lcru01', 'p01')
-        tk1 = '103'
-    elif action['farmTanks'][0] == 9:
-        S.move('jetty', '102', 'lcru01', 'p01')
-        tk1 = '101'
-    elif action['farmTanks'][0] == 10:
-        S.move('jetty', '102', 'lcru01', 'p01')
-        tk1 = '103'
-    elif action['farmTanks'][0] == 11:
-        S.move('jetty', '103', 'lcru01', 'p01')
-        tk1 = '101'
-    elif action['farmTanks'][0] == 12:
-        S.move('jetty', '103', 'lcru01', 'p01')
-        tk1 = '102'
-                
-    if action['farmTanks'][1] == 0:
-        if tk1 is not None:
-            S.move(tk1, '201', 'lcru12', 'p12')
-        S.feedUnit('202', 'p23', action['unitFeed'])
-    elif action['farmTanks'][1] == 1:
-        if tk1 is not None:
-            S.move(tk1, '201', 'lcru12', 'p12')
-        S.feedUnit('203', 'p23', action['unitFeed'])
-    elif action['farmTanks'][1] == 2:
-        if tk1 is not None:
-            S.move(tk1, '202', 'lcru12', 'p12')
-        S.feedUnit('201', 'p23', action['unitFeed'])
-    elif action['farmTanks'][1] == 3:
-        if tk1 is not None:
-            S.move(tk1, '202', 'lcru12', 'p12')
-        S.feedUnit('203', 'p23', action['unitFeed'])
-    elif action['farmTanks'][1] == 4:
-        if tk1 is not None:
-            S.move(tk1, '203', 'lcru12', 'p12')
-        S.feedUnit('201', 'p23', action['unitFeed'])
-    elif action['farmTanks'][1] == 5:
-        if tk1 is not None:
-            S.move(tk1, '203', 'lcru12', 'p12')
-        S.feedUnit('202', 'p23', action['unitFeed'])
+
+    if action[1] == 0:
+        pass
+    elif action[1] == 1:
+        S.move('101', '201', 'lcru12', 'p12')
+    elif action[1] == 2:
+        S.move('101', '201', 'lcru12', 'p12')
+    elif action[1] == 3:
+        S.move('101', '203', 'lcru12', 'p12')
+    elif action[1] == 4:
+        S.move('102', '201', 'lcru12', 'p12')
+    elif action[1] == 5:
+        S.move('102', '201', 'lcru12', 'p12')
+    elif action[1] == 6:
+        S.move('102', '203', 'lcru12', 'p12')
+    elif action[1] == 7:
+        S.move('103', '201', 'lcru12', 'p12')
+    elif action[1] == 8:
+        S.move('103', '201', 'lcru12', 'p12')
+    elif action[1] == 9:
+        S.move('103', '203', 'lcru12', 'p12')
+
+    if action[2] == 0:
+        pass
+    elif action[2] == 1:
+        S.feedUnit('201', 'p23')
+    elif action[2] == 2:
+        S.feedUnit('202', 'p23')
+    elif action[2] == 3:
+        S.feedUnit('203', 'p23')
     
     vF = np.sum(S.unit.prod)
     if vF < 1.E-3:
@@ -542,14 +485,10 @@ def siteStep(action, S):
     else:
         S.reward += vF
     if S.t > 1:
-        if action['farmTanks'][1] != S.lastAction[1]:
+        if action != S.lastAction:
             S.reward -= 0.1
-        if action['farmTanks'][0] != S.lastAction[0]:
-            S.reward -= 0.05
-    #if S.t >= TSCOPE:
-    #    S.reward += TSCOPE
     
-    S.lastAction = action['farmTanks']
+    S.lastAction = action
     
     obs = S.toObs()
     S.tkVolsLog[S.t] = obs['tkVols']
@@ -634,10 +573,106 @@ class crudeTanksEnv(gym.Env):
     def __init__(self):
         super(crudeTanksEnv, self).__init__()
 
-        self.action_space = spaces.Dict({
-            'farmTanks': spaces.MultiDiscrete([13, 6]),
-            'unitFeed': spaces.Box(low=0.1, high=1.0, shape=(), dtype=np.float64)
-        })
+        self.actionList = [
+                 (0, 0, 0),
+                 (0, 0, 1),
+                 (0, 0, 2),
+                 (0, 0, 3),
+                 (0, 1, 0),
+                 (0, 1, 2),
+                 (0, 1, 3),
+                 (0, 2, 0),
+                 (0, 2, 1),
+                 (0, 2, 3),
+                 (0, 3, 0),
+                 (0, 3, 1),
+                 (0, 3, 2),
+                 (0, 4, 0),
+                 (0, 4, 2),
+                 (0, 4, 3),
+                 (0, 5, 0),
+                 (0, 5, 1),
+                 (0, 5, 3),
+                 (0, 6, 0),
+                 (0, 6, 1),
+                 (0, 6, 2),
+                 (0, 7, 0),
+                 (0, 7, 2),
+                 (0, 7, 3),
+                 (0, 8, 0),
+                 (0, 8, 1),
+                 (0, 8, 3),
+                 (0, 9, 0),
+                 (0, 9, 1),
+                 (0, 9, 2),
+                 (1, 0, 0),
+                 (1, 0, 1),
+                 (1, 0, 2),
+                 (1, 0, 3),
+                 (1, 4, 0),
+                 (1, 4, 2),
+                 (1, 4, 3),
+                 (1, 5, 0),
+                 (1, 5, 1),
+                 (1, 5, 3),
+                 (1, 6, 0),
+                 (1, 6, 1),
+                 (1, 6, 2),
+                 (1, 7, 0),
+                 (1, 7, 2),
+                 (1, 7, 3),
+                 (1, 8, 0),
+                 (1, 8, 1),
+                 (1, 8, 3),
+                 (1, 9, 0),
+                 (1, 9, 1),
+                 (1, 9, 2),
+                 (2, 0, 0),
+                 (2, 0, 1),
+                 (2, 0, 2),
+                 (2, 0, 3),
+                 (2, 1, 0),
+                 (2, 1, 2),
+                 (2, 1, 3),
+                 (2, 2, 0),
+                 (2, 2, 1),
+                 (2, 2, 3),
+                 (2, 3, 0),
+                 (2, 3, 1),
+                 (2, 3, 2),
+                 (2, 7, 0),
+                 (2, 7, 2),
+                 (2, 7, 3),
+                 (2, 8, 0),
+                 (2, 8, 1),
+                 (2, 8, 3),
+                 (2, 9, 0),
+                 (2, 9, 1),
+                 (2, 9, 2),
+                 (3, 0, 0),
+                 (3, 0, 1),
+                 (3, 0, 2),
+                 (3, 0, 3),
+                 (3, 1, 0),
+                 (3, 1, 2),
+                 (3, 1, 3),
+                 (3, 2, 0),
+                 (3, 2, 1),
+                 (3, 2, 3),
+                 (3, 3, 0),
+                 (3, 3, 1),
+                 (3, 3, 2),
+                 (3, 4, 0),
+                 (3, 4, 2),
+                 (3, 4, 3),
+                 (3, 5, 0),
+                 (3, 5, 1),
+                 (3, 5, 3),
+                 (3, 6, 0),
+                 (3, 6, 1),
+                 (3, 6, 2)]
+        
+        self.action_space = spaces.Discrete(97)
 
         self.observation_space = spaces.Dict({
             'tkVols': spaces.Box(low=0, high=MAXCARGO, shape=(NT,), dtype=np.float64), 
@@ -657,7 +692,7 @@ class crudeTanksEnv(gym.Env):
   
     def step(self, action):
     # Execute one time step within the environment
-        return siteStep(action, self.S)
+        return siteStep(self.actionList[action], self.S)
 
     def reset(self, seed=None, **kwargs):
     # Reset the state of the environment to an initial state
@@ -674,7 +709,7 @@ class crudeTanksEnv(gym.Env):
         return
 
 gym.envs.registration.register(
-    'crudeTanksEnv-v0',
+    'crudeTanksEnv-v1',
     crudeTanksEnv,
     reward_threshold=500,
     max_episode_steps=720
