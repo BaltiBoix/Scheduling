@@ -452,6 +452,14 @@ def checkAction(S, actionList):
             if j3 == 3:
                 actionAvail[i] = False
 
+    if  S.tank('201').volUtil > S.pump('p23').flow() or\
+        S.tank('202').volUtil > S.pump('p23').flow() or\
+        S.tank('203').volUtil > S.pump('p23').flow():
+        for i, (j1, j2, j3) in enumerate(actionList):
+            if j3 == 0:
+                actionAvail[i] = False
+        
+
     return actionAvail
         
 def siteReset(kwargs):
