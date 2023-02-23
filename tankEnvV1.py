@@ -717,7 +717,7 @@ class crudeTanksEnv(gym.Env):
                  (3, 6, 1),
                  (3, 6, 2)]
         
-        self.action_space = spaces.Discrete(97)
+        self.action_space = spaces.Discrete(len(self.actionList))
 
         self.observation_space = spaces.Dict({
             'tkVols': spaces.Box(low=0, high=MAXCARGO, shape=(NT,), dtype=np.float64), 
