@@ -16,6 +16,10 @@ NL = 2
 TSCOPE = 720 #hours
 NCUTS = 5
 MAXCARGO = 250
+MEANASSAY = [0.15, 0.15, 0.3, 0.25, 0.15]
+UNITVOLCUTMAX = [0.25, 0.16, 0.3, 0.3, 0.25]
+TKMIN = 7
+TKMAX = 100
 
 class NumpyEncoder(json.JSONEncoder):
     """ Special json encoder for numpy types """
@@ -43,12 +47,18 @@ def randomSched(nCrudes, cargoSizes, tScope):
         d[t] = crudeParcel(cargoVols[i], comp)
     return d
 
-def randomAssay(nCrudes, nCuts):
+def randomAssay(nCrudes=NC, nCuts=NCUTS):
     a = []
-    for i in range(nCrudes):
-        a.append(randomComp(nCuts))
+    if nCuts == NCUTS:
+        for i in range(nCrudes):
+            b = []
+            for j in range(nCuts):
+                b.append(max(0.2*MEANASSAY[j], np.random.normal(MEANASSAY[j], 0.5*MEANASSAY[j])))
+            a.append(b/np.sum(b))
+    else:
+        for i in range(nCrudes):
+            a.append(randomComp(nCuts))
     return np.transpose(np.array(a))
-
 def flatten_dict(dd, separator='_', prefix=''):
     '''https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys'''
     return { prefix + separator + k if prefix else k : v
@@ -354,7 +364,7 @@ class site():
         self.unit = None
         self.t = 0
         self.reward = 0
-        self.lastAction = np.zeros(2, dtype=int)
+        self.lastAction = np.zeros(3, dtype=int)
         self.movesLog = OrderedDict()
         self.prodsLog = OrderedDict()
         self.tkVolsLog = OrderedDict()
@@ -446,7 +456,7 @@ class site():
         return S
     
     def toObs(self):
-        d = OrderedDict({'linComps': [], 'linCuts': [], 'linVols': [], 'tkComps': [], 'tkCuts': [], 
+        d = OrderedDict({'lastAction': 0, 'linComps': [], 'linCuts': [], 'linVols': [], 'tkComps': [], 'tkCuts': [], 
                          'tkVolEmpties': [], 'tkVolUtils': [], 'tkVols': [], 'unitProds': 0})
         for k in self.tanks.ts.keys():
             d['tkVols'].append(self.tank(k).vol)
@@ -461,6 +471,7 @@ class site():
         for k in d.keys():
             d[k] = np.array(d[k])
         d['unitProds'] = self.unit.prod
+        d['lastAction'] = np.array(self.lastAction)
         return d
             
     def render(self):
@@ -543,7 +554,7 @@ def checkAction(S, actionList):
 def siteReset(kwargs):
     np.random.default_rng(200560)
     
-    if 'siteDict' in kwargs.keys():
+    if 'siteDict' in kwargs.keys() and kwargs['siteDict'] is not None:
         S = site.fromDict(kwargs['siteDict'])
     else:
         S = site()
@@ -551,23 +562,20 @@ def siteReset(kwargs):
         S.addCargo(crudeCargo('jetty', sch))
         S.addLine(line('lcru01', 5, [crudeParcel(5, randomComp(NC))]))
         S.addPump(pump('p01', 10))
-        S.addTank(crudeTank('101', 60, randomComp(NC), 7, 100))
-        S.addTank(crudeTank('102', 50, randomComp(NC), 7, 100))
-        S.addTank(crudeTank('103', 7, randomComp(NC), 7, 100))
-        S.addTank(crudeTank('201', 80, randomComp(NC), 7, 100))
-        S.addTank(crudeTank('202', 30, randomComp(NC), 7, 100))
-        S.addTank(crudeTank('203', 7, randomComp(NC), 7, 100))
+        for tn in ['101', '102', '103', '201', '202', '203']:
+            S.addTank(crudeTank(tn, min(TKMAX, max(TKMIN, np.random.normal(0.5*TKMAX, 0.25*TKMAX))), 
+                                randomComp(NC), TKMIN, TKMAX))
         S.addLine(line('lcru12', 7.5, [crudeParcel(3, randomComp(NC)), crudeParcel(4.5, randomComp(NC))]))
         S.addPump(pump('p12', 5))
-        if 'assay' in kwargs.keys():
+        if 'assay' in kwargs.keys() and kwargs['assay'] is not None:
             assay = kwargs['assay']
             assert (np.abs(np.sum(assay, axis=0)-1) < 1.E-3).all(), 'crude yieds sum not 1'
         else:
             assay = randomAssay(NC, NCUTS)
-        if 'unitVolCutMax' in kwargs.keys():    
+        if 'unitVolCutMax' in kwargs.keys() and kwargs['unitVolCutMax'] is not None:    
             S.addUnit(crudeUnit('unit', assay, kwargs['unitVolCutMax']))
         else:
-            S.addUnit(crudeUnit('unit', assay, np.array(NCUTS*[1/NCUTS])))
+            S.addUnit(crudeUnit('unit', assay, UNITVOLCUTMAX))
         S.addPump(pump('p23', 1))
     obs = S.toObs()
     S.tkVolsLog[S.t] = obs['tkVols']
@@ -624,7 +632,11 @@ def siteStep(actN, actionList, S):
     else:
         S.reward += vF
     if S.t > 1:
-        if action != S.lastAction:
+        if action[0] != S.lastAction[0]:
+            S.reward -= 0.05
+        if action[1] != S.lastAction[1]:
+            S.reward -= 0.05
+        if action[2] != S.lastAction[0]:
             S.reward -= 0.1
     
     S.lastAction = action
@@ -822,7 +834,8 @@ class crudeTanksEnv(gym.Env):
             'linVols': spaces.Box(low=0, high=20.0, shape=(NL,), dtype=np.float64), 
             'linComps': spaces.Box(low=0, high=1.0, shape=(NL, NC), dtype=np.float64),
             'linCuts': spaces.Box(low=0, high=1.0, shape=(NL, NCUTS), dtype=np.float64),
-            'unitProds': spaces.Box(low=0, high=10.0, shape=(NCUTS,), dtype=np.float64)
+            'unitProds': spaces.Box(low=0, high=10.0, shape=(NCUTS,), dtype=np.float64),
+            'lastAction': spaces.MultiDiscrete([4, 10, 4])
 
         })
         
