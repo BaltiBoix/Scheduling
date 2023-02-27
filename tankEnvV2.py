@@ -16,10 +16,11 @@ NL = 2
 TSCOPE = 720 #hours
 NCUTS = 5
 MAXCARGO = 250
-MEANASSAY = [0.15, 0.15, 0.3, 0.25, 0.15]
-UNITVOLCUTMAX = [0.25, 0.16, 0.3, 0.3, 0.25]
+MEANASSAY = np.array([0.15, 0.15, 0.3, 0.25, 0.15])
+UNITVOLCUTMAX = np.array([0.25, 0.16, 0.3, 0.3, 0.25])
 TKMIN = 7
 TKMAX = 100
+TKSETTLET = 12
 
 class NumpyEncoder(json.JSONEncoder):
     """ Special json encoder for numpy types """
@@ -92,6 +93,7 @@ class crudeTank(crudeParcel):
         self.name = name
         self.volMin = volMin
         self.volMax = volMax
+        self.tLastInput = 0
         assert self.vol >= self.volMin, '{} Initial volumen below min'.format(self.name)  
         assert self.vol <= self.volMax, '{} Initial volumen above max'.format(self.name)
         self.actVol()
@@ -410,6 +412,7 @@ class site():
                 self.tank(tout).putParcel(cP)
             self.movesLog[self.t][tin] = -1
             self.movesLog[self.t][tout] = 1
+            self.tank(tout).tLastInput = self.t
         return
 
     def move_(self, tin, tout, v):
@@ -528,31 +531,32 @@ def checkAction(S, actionList):
             if j2 in [3, 6, 9]:
                 actionAvail[i] = False
 
-    if S.tank('201').volUtil < S.pump('p23').flow():
+    if S.tank('201').volUtil < S.pump('p23').flow() or (S.t-S.tank('201').tLastInput) < TKSETTLET:
         for i, (j1, j2, j3) in enumerate(actionList):
             if j3 == 1:
                 actionAvail[i] = False
-    if S.tank('202').volUtil < S.pump('p23').flow():
+    if S.tank('202').volUtil < S.pump('p23').flow() or (S.t-S.tank('202').tLastInput) < TKSETTLET:
         for i, (j1, j2, j3) in enumerate(actionList):
             if j3 == 2:
                 actionAvail[i] = False
-    if S.tank('203').volUtil < S.pump('p23').flow():
+    if S.tank('203').volUtil < S.pump('p23').flow() or (S.t-S.tank('203').tLastInput) < TKSETTLET:
         for i, (j1, j2, j3) in enumerate(actionList):
             if j3 == 3:
                 actionAvail[i] = False
 
-    if  S.tank('201').volUtil > S.pump('p23').flow() or\
-        S.tank('202').volUtil > S.pump('p23').flow() or\
-        S.tank('203').volUtil > S.pump('p23').flow():
+    if  (S.tank('201').volUtil > S.pump('p23').flow() and (S.t-S.tank('201').tLastInput) >= TKSETTLET) or\
+        (S.tank('202').volUtil > S.pump('p23').flow() and (S.t-S.tank('201').tLastInput) >= TKSETTLET)  or\
+        (S.tank('203').volUtil > S.pump('p23').flow() and (S.t-S.tank('201').tLastInput) >= TKSETTLET) :
         for i, (j1, j2, j3) in enumerate(actionList):
             if j3 == 0:
                 actionAvail[i] = False
         
-
     return actionAvail
         
-def siteReset(kwargs):
-    np.random.default_rng(200560)
+def siteReset(seed, kwargs):
+    if seed is not None:
+        np.random.seed(seed)
+#     np.random.default_rng(200560)
     
     if 'siteDict' in kwargs.keys() and kwargs['siteDict'] is not None:
         S = site.fromDict(kwargs['siteDict'])
@@ -839,7 +843,7 @@ class crudeTanksEnv(gym.Env):
 
         })
         
-        self.S = siteReset({})
+        self.S = siteReset(None, {})
         return
   
     def step(self, action):
@@ -849,7 +853,7 @@ class crudeTanksEnv(gym.Env):
     def reset(self, seed=None, **kwargs):
     # Reset the state of the environment to an initial state
         super().reset(seed=seed)
-        self.S, obs = siteReset(kwargs)
+        self.S, obs = siteReset(seed, kwargs)
         return obs, {'sched': deepcopy(self.S.cargo.sched), 
                      'assay': deepcopy(self.S.unit.assay), 
                      'unitVolCutMax': deepcopy(self.S.unit.volCutMax),
