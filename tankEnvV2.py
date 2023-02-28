@@ -40,13 +40,13 @@ def randomComp(nCrudes):
 def randomSched(nCrudes, cargoSizes, tScope):
     d = dict()
     cargoVols = np.random.permutation(cargoSizes)
-    cargoCrudes = np.random.randint(0, 10, cargoVols.shape[0])
-    cargoTimes = np.sort(np.random.randint(0, tScope, cargoVols.shape[0]))
+    cargoCrudes = np.random.randint(0, nCrudes, cargoVols.shape[0])
+    cargoTimes = np.sort(np.random.choice(range(tScope), size=cargoVols.shape[0], replace=False))
     for i, t in enumerate(cargoTimes):
-        comp = np.zeros(10, dtype=float)
+        comp = np.zeros(nCrudes)
         comp[cargoCrudes[i]] = 1
         d[t] = crudeParcel(cargoVols[i], comp)
-    return d
+    return d   
 
 def randomAssay(nCrudes=NC, nCuts=NCUTS):
     a = []
@@ -120,7 +120,7 @@ class crudeTank(crudeParcel):
         
     def toDict(self):
         return {'volUtil': self.volUtil, 'volMin': self.volMin,'volMax': self.volMax, 
-                'cP': super().toDict()}        
+                'tLastInput': self.tLastInput, 'cP': super().toDict()}        
     
     @classmethod
     def fromDict(cls, name, d):
@@ -459,12 +459,14 @@ class site():
         return S
     
     def toObs(self):
-        d = OrderedDict({'lastAction': 0, 'linComps': [], 'linCuts': [], 'linVols': [], 'tkComps': [], 'tkCuts': [], 
+        d = OrderedDict({'lastAction': 0, 'linComps': [], 'linCuts': [], 'linVols': [], 'tLastInput': [], 
+                         'tkComps': [], 'tkCuts': [], 
                          'tkVolEmpties': [], 'tkVolUtils': [], 'tkVols': [], 'unitProds': 0})
         for k in self.tanks.ts.keys():
             d['tkVols'].append(self.tank(k).vol)
             d['tkVolUtils'].append(self.tank(k).volUtil)
             d['tkVolEmpties'].append(self.tank(k).volEmpty)
+            d['tLastInput'].append(self.tank(k).tLastInput)
             d['tkComps'].append(self.tank(k).comp)
             d['tkCuts'].append(np.matmul(self.unit.assay, self.tank(k).comp))
         for k in self.lines.ls.keys():
@@ -531,28 +533,28 @@ def checkAction(S, actionList):
             if j2 in [3, 6, 9]:
                 actionAvail[i] = False
 
-    if S.tank('201').volUtil < S.pump('p23').flow() or (S.t-S.tank('201').tLastInput) < TKSETTLET:
+    if S.tank('201').volUtil < S.pump('p23').flow() or (max(S.t, TKSETTLET)-S.tank('201').tLastInput) < TKSETTLET:
         for i, (j1, j2, j3) in enumerate(actionList):
             if j3 == 1:
                 actionAvail[i] = False
-    if S.tank('202').volUtil < S.pump('p23').flow() or (S.t-S.tank('202').tLastInput) < TKSETTLET:
+    if S.tank('202').volUtil < S.pump('p23').flow() or (max(S.t, TKSETTLET)-S.tank('202').tLastInput) < TKSETTLET:
         for i, (j1, j2, j3) in enumerate(actionList):
             if j3 == 2:
                 actionAvail[i] = False
-    if S.tank('203').volUtil < S.pump('p23').flow() or (S.t-S.tank('203').tLastInput) < TKSETTLET:
+    if S.tank('203').volUtil < S.pump('p23').flow() or (max(S.t, TKSETTLET)-S.tank('203').tLastInput) < TKSETTLET:
         for i, (j1, j2, j3) in enumerate(actionList):
             if j3 == 3:
                 actionAvail[i] = False
 
-    if  (S.tank('201').volUtil > S.pump('p23').flow() and (S.t-S.tank('201').tLastInput) >= TKSETTLET) or\
-        (S.tank('202').volUtil > S.pump('p23').flow() and (S.t-S.tank('201').tLastInput) >= TKSETTLET)  or\
-        (S.tank('203').volUtil > S.pump('p23').flow() and (S.t-S.tank('201').tLastInput) >= TKSETTLET) :
+    if  (S.tank('201').volUtil > S.pump('p23').flow() and (max(S.t, TKSETTLET)-S.tank('201').tLastInput) >= TKSETTLET) or\
+        (S.tank('202').volUtil > S.pump('p23').flow() and (max(S.t, TKSETTLET)-S.tank('202').tLastInput) >= TKSETTLET)  or\
+        (S.tank('203').volUtil > S.pump('p23').flow() and (max(S.t, TKSETTLET)-S.tank('203').tLastInput) >= TKSETTLET):
         for i, (j1, j2, j3) in enumerate(actionList):
             if j3 == 0:
                 actionAvail[i] = False
-        
+
     return actionAvail
-        
+
 def siteReset(seed, kwargs):
     if seed is not None:
         np.random.seed(seed)
@@ -833,6 +835,7 @@ class crudeTanksEnv(gym.Env):
             'tkVols': spaces.Box(low=0, high=MAXCARGO, shape=(NT,), dtype=np.float64), 
             'tkVolUtils': spaces.Box(low=0, high=MAXCARGO, shape=(NT,), dtype=np.float64), 
             'tkVolEmpties': spaces.Box(low=-50, high=MAXCARGO, shape=(NT,), dtype=np.float64), 
+            'tLastInput': spaces.Box(low=-50, high=TSCOPE, shape=(NT,), dtype=np.float64), 
             'tkComps': spaces.Box(low=0, high=1.0, shape=(NT, NC), dtype=np.float64), 
             'tkCuts': spaces.Box(low=0, high=1.0, shape=(NT, NCUTS), dtype=np.float64), 
             'linVols': spaces.Box(low=0, high=20.0, shape=(NL,), dtype=np.float64), 
@@ -867,6 +870,6 @@ class crudeTanksEnv(gym.Env):
 gym.envs.registration.register(
     'crudeTanksEnv-v2',
     crudeTanksEnv,
-    reward_threshold=500,
+    reward_threshold=650,
     max_episode_steps=720
 )
