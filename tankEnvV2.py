@@ -643,7 +643,7 @@ def siteStep(actN, actionList, S):
         if action[1] != S.lastAction[1]:
             S.reward -= 0.05
         if action[2] != S.lastAction[0]:
-            S.reward -= 0.1
+            S.reward -= 0.25
     
     S.lastAction = action
     
