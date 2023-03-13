@@ -138,7 +138,7 @@ class crudeCargo(crudeTank):
     def act(self, t):
         if len(self.sched) > 0:
             ts = min(self.sched.keys())
-            if self.vol < np.finfo(np.float32).eps and t <= ts:
+            if self.vol < np.finfo(np.float32).eps and t >= ts:
                 self.vol = self.sched[ts].vol
                 self.comp = self.sched[ts].comp
                 self.actVol()
@@ -635,8 +635,13 @@ def siteStep(actN, actionList, S):
             S.reward -= 0.05
         if action[1] != S.lastAction[1]:
             S.reward -= 0.05
-        if action[2] != S.lastAction[0]:
-            S.reward -= 0.25
+        if action[2] != S.lastAction[2]:
+            if S.lastAction[2] == 1 and S.tank('201').volUtil >= S.pump('p23').flow():
+                S.reward -= 0.25
+            elif S.lastAction[2] == 2 and S.tank('202').volUtil >= S.pump('p23').flow():
+                S.reward -= 0.25
+            elif S.lastAction[2] == 3 and S.tank('203').volUtil >= S.pump('p23').flow():
+                S.reward -= 0.25
     
     S.lastAction = action
     
