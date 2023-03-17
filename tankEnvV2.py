@@ -328,7 +328,7 @@ class crudeUnit():
         self.name = name
         self.assay = assay
         self.volCutMax = volCutMax
-        self.prod = np.zeros(assay.shape[0], dtype=float)
+        self.prod = np.zeros(self.assay.shape[0], dtype=float)
         return
     
     def distil(self, cP):
@@ -336,6 +336,10 @@ class crudeUnit():
         v = np.min(np.append(self.volCutMax/yields, [cP.vol]))
         self.prod = v * yields
         return v
+
+    def act(self):
+        self.prod = np.zeros(self.assay.shape[0], dtype=float)
+        return
 
     def toDict(self):
         return {'name': self.name, 'assay': self.assay.tolist(), 'volCutMax': self.volCutMax.tolist(),'prod': self.prod.tolist()}
@@ -430,6 +434,7 @@ class site():
     def newStep(self):
         self.t += 1
         self.cargo.act(self.t)
+        self.unit.act()
         self.reward = 0.0
         self.movesLog[self.t] = {}
         return
@@ -634,7 +639,19 @@ def siteStep(actN, actionList, S):
         if action[0] != S.lastAction[0]:
             S.reward -= 0.05
         if action[1] != S.lastAction[1]:
-            S.reward -= 0.05
+            if S.lastAction[1] in [1, 2, 3] and S.tank('101').volUtil >= S.pump('p12').flow():
+                S.reward -= 0.1
+            elif S.lastAction[1] in [4, 5, 6] and S.tank('102').volUtil >= S.pump('p12').flow():
+                S.reward -= 0.1
+            elif S.lastAction[1] in [7, 8, 9] and S.tank('103').volUtil >= S.pump('p12').flow():
+                S.reward -= 0.1
+            elif S.lastAction[1] in [1, 4, 7] and S.tank('201').volEmpty >= S.pump('p12').flow():
+                S.reward -= 0.1
+            elif S.lastAction[1] in [2, 5, 8] and S.tank('202').volEmpty >= S.pump('p12').flow():
+                S.reward -= 0.1
+            elif S.lastAction[1] in [3, 6, 9] and S.tank('203').volEmpty >= S.pump('p12').flow():
+                S.reward -= 0.1
+            
         if action[2] != S.lastAction[2]:
             if S.lastAction[2] == 1 and S.tank('201').volUtil >= S.pump('p23').flow():
                 S.reward -= 0.25
@@ -868,6 +885,6 @@ class crudeTanksEnv(gym.Env):
 gym.envs.registration.register(
     'crudeTanksEnv-v2',
     crudeTanksEnv,
-    reward_threshold=650,
+    reward_threshold=700,
     max_episode_steps=720
 )
