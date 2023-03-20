@@ -363,6 +363,7 @@ class site():
         self.unit = None
         self.t = 0
         self.reward = 0
+        self.actionAvail_ = [{0, 1, 2, 3}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, {0, 1, 2, 3}]
         self.lastAction = np.zeros(3, dtype=int)
         self.movesLog = OrderedDict()
         self.prodsLog = OrderedDict()
@@ -551,7 +552,13 @@ def checkAction(S, actionList):
             if j3 == 0:
                 actionAvail[i] = False
 
-    return actionAvail
+    actionAvail_ = [set(), set(), set()]
+    for i, J in enumerate(actionList):
+        if actionAvail[i]:
+            for k, j in enumerate(J):
+                actionAvail_[k].add(j)
+
+    return actionAvail, actionAvail_
 
 def siteReset(seed, kwargs):
     if seed is not None:
@@ -590,6 +597,12 @@ def siteStep(actN, actionList, S):
     S.newStep()
     
     action = actionList[actN]
+
+    tmp = [0, 0, 0]
+    for i, j in enumerate(action):
+        if j in S.actionAvail_[i]:
+            tmp[i] = j
+    action = tuple(tmp)
 
     if action[0] == 0:
         pass
@@ -665,7 +678,7 @@ def siteStep(actN, actionList, S):
     obs = S.toObs()
     S.tkVolsLog[S.t] = obs['tkVols']
 
-    actionAvail = checkAction(S, actionList)
+    actionAvail, S.actionAvail_ = checkAction(S, actionList)
     
     #return obs, S.reward, S.t >= TSCOPE or np.sum(S.unit.prod) < 1.E-3 or (~actionAvail[1]).all(), False, {'actionAvail': actionAvail}
     return obs, S.reward, S.t >= TSCOPE, np.sum(S.unit.prod) < 1.E-3 or (~actionAvail[1]).all(), {'actionAvail': actionAvail}
@@ -875,7 +888,7 @@ class crudeTanksEnv(gym.Env):
         return obs, {'sched': deepcopy(self.S.cargo.sched), 
                      'assay': deepcopy(self.S.unit.assay), 
                      'unitVolCutMax': deepcopy(self.S.unit.volCutMax),
-                     'actionAvail': checkAction(self.S, self.actionList)}
+                     'actionAvail': checkAction(self.S, self.actionList)[0]}
   
     def render(self, mode='human', close=False):
     # Render the environment to the screen
