@@ -365,6 +365,7 @@ class site():
         self.reward = 0
         self.actionAvail_ = [{0, 1, 2, 3}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, {0, 1, 2, 3}]
         self.lastAction = np.zeros(3, dtype=int)
+        self.lastAction_ = 0
         self.movesLog = OrderedDict()
         self.prodsLog = OrderedDict()
         self.tkVolsLog = OrderedDict()
@@ -475,7 +476,7 @@ class site():
         for k in d.keys():
             d[k] = np.array(d[k])
         d['unitProds'] = self.unit.prod
-        d['lastAction'] = np.array(self.lastAction)
+        d['lastAction'] = self.lastAction_
         return d
             
     def render(self):
@@ -618,19 +619,19 @@ def siteStep(actN, actionList, S):
     elif action[1] == 1:
         S.move('101', '201', 'lcru12', 'p12')
     elif action[1] == 2:
-        S.move('101', '201', 'lcru12', 'p12')
+        S.move('101', '202', 'lcru12', 'p12')
     elif action[1] == 3:
         S.move('101', '203', 'lcru12', 'p12')
     elif action[1] == 4:
         S.move('102', '201', 'lcru12', 'p12')
     elif action[1] == 5:
-        S.move('102', '201', 'lcru12', 'p12')
+        S.move('102', '202', 'lcru12', 'p12')
     elif action[1] == 6:
         S.move('102', '203', 'lcru12', 'p12')
     elif action[1] == 7:
         S.move('103', '201', 'lcru12', 'p12')
     elif action[1] == 8:
-        S.move('103', '201', 'lcru12', 'p12')
+        S.move('103', '202', 'lcru12', 'p12')
     elif action[1] == 9:
         S.move('103', '203', 'lcru12', 'p12')
 
@@ -674,6 +675,7 @@ def siteStep(actN, actionList, S):
                 S.reward -= 0.25
     
     S.lastAction = action
+    S.lastAction_ = actN
     
     obs = S.toObs()
     S.tkVolsLog[S.t] = obs['tkVols']
@@ -870,7 +872,7 @@ class crudeTanksEnv(gym.Env):
             'linComps': spaces.Box(low=0, high=1.0, shape=(NL, NC), dtype=np.float64),
             'linCuts': spaces.Box(low=0, high=1.0, shape=(NL, NCUTS), dtype=np.float64),
             'unitProds': spaces.Box(low=0, high=10.0, shape=(NCUTS,), dtype=np.float64),
-            'lastAction': spaces.MultiDiscrete([4, 10, 4])
+            'lastAction': spaces.Discrete(len(self.actionList))
 
         })
         
